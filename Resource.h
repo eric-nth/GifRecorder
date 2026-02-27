@@ -2,17 +2,14 @@
 // Microsoft Visual C++ 生成的包含文件。
 // 使用者 GifRec.rc
 
-#define IDS_APP_TITLE			103
-
-#define IDR_MAINFRAME			128
-#define IDD_GIFREC_DIALOG	102
-#define IDD_ABOUTBOX			103
-#define IDM_ABOUT				104
-#define IDM_EXIT				105
-#define IDI_GIFREC			107
-#define IDI_SMALL				108
-#define IDC_GIFREC			109
-#define IDC_MYICON				2
+#define IDI_APP_ICON                    101
+#define IDR_MENU1                       102
+#define ID_TRAY_SETTINGS                40001
+#define ID_TRAY_EXIT                    40002
+#define IDD_SETTINGS                    103
+#define IDC_EDIT_FPS                    1001
+#define IDC_EDIT_QUALITY                1002
+#define IDC_EDIT_PATH                   1003
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif
