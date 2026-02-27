@@ -191,6 +191,17 @@ void StopRecording() {
     }
 }
 
+//About框过程
+INT_PTR CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (msg == WM_INITDIALOG) return (INT_PTR)TRUE;
+    if (msg == WM_COMMAND && (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)) {
+        EndDialog(hwnd, LOWORD(wParam));
+        return (INT_PTR)TRUE;
+    }
+    return (INT_PTR)FALSE;
+}
+
+
 // 隐藏主窗口过程（处理托盘和热键）
 LRESULT CALLBACK HiddenWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -234,6 +245,9 @@ LRESULT CALLBACK HiddenWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
         }
         else if (LOWORD(wParam) == ID_TRAY_SETTINGS) {
             DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), NULL, SettingsDlgProc);
+        }
+        else if (LOWORD(wParam) == ID_TRAY_ABOUT) {
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), hwnd, AboutDlgProc);
         }
         break;
     case WM_DESTROY:

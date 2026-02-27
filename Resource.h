@@ -7,7 +7,9 @@
 #define IDR_MENU1                       102
 #define ID_TRAY_SETTINGS                40001
 #define ID_TRAY_EXIT                    40002
+#define ID_TRAY_ABOUT                   40003
 #define IDD_SETTINGS                    103
+#define IDD_ABOUT                       104
 #define IDC_EDIT_FPS                    1001
 #define IDC_EDIT_QUALITY                1002
 #define IDC_EDIT_PATH                   1003
