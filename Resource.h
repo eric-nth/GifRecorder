@@ -3,6 +3,7 @@
 // 使用者 GifRec.rc
 
 #define IDI_APP_ICON                    101
+#define IDI_APP_SMALL                   108
 #define IDR_MENU1                       102
 #define ID_TRAY_SETTINGS                40001
 #define ID_TRAY_EXIT                    40002

@@ -326,6 +326,8 @@ LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 INT_PTR CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_INITDIALOG:
+        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APP_SMALL)));
+        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APP_ICON)));
         SetDlgItemInt(hwnd, IDC_EDIT_FPS, g_settings.fps, FALSE);
         SetDlgItemInt(hwnd, IDC_EDIT_QUALITY, g_settings.quality, FALSE);
         SetDlgItemText(hwnd, IDC_EDIT_PATH, g_settings.path);
@@ -352,6 +354,7 @@ void ShowTrayBalloon(const wchar_t* title, const wchar_t* text) {
     wcscpy_s(nid.szInfoTitle, title);
     wcscpy_s(nid.szInfo, text);
     nid.uFlags = NIF_INFO;
+    nid.dwInfoFlags = NIIF_USER;
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
@@ -384,7 +387,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     nid.uCallbackMessage = WM_TRAYICON;
-    nid.hIcon = LoadIcon(NULL, IDI_APPLICATION); // 默认图标
+    nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON)); // 加载图标资源
     wcscpy_s(nid.szTip, L"GIF Recorder (Ctrl+Shift+G)");
     Shell_NotifyIcon(NIM_ADD, &nid);
 
