@@ -209,6 +209,7 @@ LRESULT CALLBACK HiddenWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 
                 SetWindowPos(hOverlayWnd, HWND_TOPMOST, x, y, w, h, SWP_SHOWWINDOW);
                 SetForegroundWindow(hOverlayWnd);
+                SetFocus(hOverlayWnd);
             }
             else if (currentState == RECORDING) {
                 StopRecording();
@@ -247,6 +248,20 @@ LRESULT CALLBACK HiddenWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 // 覆盖层窗口过程（处理鼠标框选）
 LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) {
+            // 如果正在拖拽，先释放鼠标捕获
+            if (g_isDragging) {
+                g_isDragging = false;
+                ReleaseCapture();
+            }
+            // 隐藏窗口并重置状态
+            ShowWindow(hwnd, SW_HIDE);
+            currentState = IDLE;
+            g_selRect = { 0 }; // 清空选区
+            //ShowTrayBalloon(L"Cancelled", L"Selection was cancelled.");
+        }
+        break;
     case WM_LBUTTONDOWN:
         g_isDragging = true;
         g_startPt.x = (short)LOWORD(lParam);
