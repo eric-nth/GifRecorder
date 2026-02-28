@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="GifRec.vcxproj" />
+  <Project Path="GifRec.vcxproj" Id="34dbb1ed-0b51-428b-8fd4-815fa63aaef1" />
 </Solution>

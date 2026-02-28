@@ -11,9 +11,27 @@
 #include <atomic>
 #include <vector>
 #include <ctime>
-#include "gif.h"
 
+//Visual Styles
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+//GDI+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <objidl.h> // GDI+ 依赖的 COM 接口
+#include <gdiplus.h>
+#pragma comment(lib, "gdiplus.lib")
+//using namespace Gdiplus;
+// 全局变量增加 GDI+ Token
+ULONG_PTR gdiplusToken;
+#include <algorithm> // 包含这个来代替宏 min/max
+
+//gif.h
+#include "gif.h"
 
 enum AppState { IDLE, SELECTING, RECORDING };
 
@@ -309,39 +327,67 @@ LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             StartRecording();
         }
         break;
+    case WM_SETCURSOR:
+        SetCursor(LoadCursor(NULL, IDC_CROSS)); //设为十字光标
+        return TRUE;
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
-        RECT clientRect;
-        GetClientRect(hwnd, &clientRect);
+        RECT cr;
+        GetClientRect(hwnd, &cr);
 
-        // 双缓冲避免闪烁
-        HDC hMemDC = CreateCompatibleDC(hdc);
-        HBITMAP hBmp = CreateCompatibleBitmap(hdc, clientRect.right, clientRect.bottom);
-        HBITMAP hOldBmp = (HBITMAP)SelectObject(hMemDC, hBmp);
+        // 使用双缓冲
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP memBmp = CreateCompatibleBitmap(hdc, cr.right, cr.bottom);
+        HBITMAP hOldBmp = (HBITMAP)SelectObject(memDC, memBmp);
 
-        // 填充半透明黑色背景
-        HBRUSH bgBrush = CreateSolidBrush(RGB(0, 0, 0));
-        FillRect(hMemDC, &clientRect, bgBrush);
-        DeleteObject(bgBrush);
+        { // 限制 Graphics 作用域，确保在 BitBlt 前析构或刷新
+            Gdiplus::Graphics g(memDC);
+            g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);// 开启抗锯齿
 
-        // 挖空选区
-        if (g_isDragging) {
-            ExcludeClipRect(hMemDC, g_selRect.left, g_selRect.top, g_selRect.right, g_selRect.bottom);
-            FillRect(hMemDC, &clientRect, (HBRUSH)GetStockObject(BLACK_BRUSH)); // 仅用于确保裁剪外区域正确
-            SelectClipRgn(hMemDC, NULL);
+            // 1. 背景遮罩 - 使用强制类型转换
+            Gdiplus::SolidBrush maskBrush(Gdiplus::Color(150, 0, 0, 0));
+            g.FillRectangle(&maskBrush, (INT)0, (INT)0, (INT)cr.right, (INT)cr.bottom);
 
-            // 画红色边框
-            HBRUSH borderBrush = CreateSolidBrush(RGB(255, 0, 0));
-            FrameRect(hMemDC, &g_selRect, borderBrush);
-            DeleteObject(borderBrush);
+            if (g_isDragging || (g_selRect.right - g_selRect.left > 0)) {
+                int x = g_selRect.left;
+                int y = g_selRect.top;
+                int w = g_selRect.right - g_selRect.left;
+                int h = g_selRect.bottom - g_selRect.top;
+
+                // 2. 挖空选区 (让选区变透明) - 使用 Rect 对象
+                g.SetCompositingMode(Gdiplus::CompositingModeSourceCopy);
+                Gdiplus::SolidBrush transBrush(Gdiplus::Color(0, 0, 0, 0));
+                g.FillRectangle(&transBrush, Gdiplus::Rect(x, y, w, h));
+
+                // 3. 绘制亮蓝色选框边缘
+                g.SetCompositingMode(Gdiplus::CompositingModeSourceOver);
+                Gdiplus::Pen pen(Gdiplus::Color(255, 0, 120, 215), 2.0f);
+                g.DrawRectangle(&pen, Gdiplus::Rect(x, y, w, h));
+
+                // 4. 文字标签
+                if (w > 20) {
+                    Gdiplus::FontFamily ff(L"Segoe UI");
+                    Gdiplus::Font font(&ff, 10, Gdiplus::FontStyleBold, Gdiplus::UnitPoint);
+                    Gdiplus::SolidBrush wBrush(Gdiplus::Color(255, 255, 255, 255));
+                    Gdiplus::SolidBrush bBrush(Gdiplus::Color(255, 0, 120, 215));
+
+                    wchar_t buf[64];
+                    swprintf_s(buf, L" %d x %d ", w, h);
+
+                    Gdiplus::RectF textBg((Gdiplus::REAL)x, (Gdiplus::REAL)(y < 30 ? y + h + 5 : y - 25), 100.0f, 20.0f);// 算文字显示位置（选框右下角），防止标签超出屏幕底部
+                    // 画标签的小背景
+                    g.FillRectangle(&bBrush, textBg);
+                    g.DrawString(buf, -1, &font, Gdiplus::PointF(textBg.X, textBg.Y), &wBrush);
+                }
+            }
         }
 
-        BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, hMemDC, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, cr.right, cr.bottom, memDC, 0, 0, SRCCOPY);
 
-        SelectObject(hMemDC, hOldBmp);
-        DeleteObject(hBmp);
-        DeleteDC(hMemDC);
+        SelectObject(memDC, hOldBmp);
+        DeleteObject(memBmp);
+        DeleteDC(memDC);
         EndPaint(hwnd, &ps);
         break;
     }
@@ -391,6 +437,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     // 强制声明 DPI 感知，防止在缩放的显示器上截屏不完整
     SetProcessDPIAware();
 
+    // GDI+ 初始化
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+    Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
     hInst = hInstance;
     LoadSettings();
 
@@ -427,6 +477,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    Gdiplus::GdiplusShutdown(gdiplusToken);
 
     return (int)msg.wParam;
 }
